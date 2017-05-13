@@ -4,7 +4,8 @@ description: |-
   With this step you can build ionic apps easily.
   Select your environment things and start building.
 
-  On our GitHub page you can see complete Bitrise examples for iOS and Android.
+  On our [GitHub page](https://github.com/bussmann-it/steps-ionic/blob/master/README.md) you can see complete Bitrise examples for iOS and Android.
+  We describe the whole process for the Ionic conference app. From creating certificate or keystore to build the app successfully.
 
   If you have questions feel free to ask us in english and german language.
   We will help you as soon as possible ;-)

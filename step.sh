@@ -53,7 +53,7 @@ if [ "${build_for_platform}" = "ios" ]; then
     sed -i '' 's/ProvisioningStyle = Automatic;/ProvisioningStyle = '"${ios_provisioning_style}"';/' "${BITRISE_PROJECT_PATH}/project.pbxproj"
 else
     # If we have multiple apk files then we should manage the situation
-    APK_PATHS=()
+    APK_PATHS=""
     for apkFile in ./platforms/android/build/outputs/apk/*.apk
     do
         echo "Found file: ${apkFile}"
@@ -72,10 +72,10 @@ else
             envman add --key BITRISE_APK_PATH --value "${apkFile}"
             BITRISE_APK_PATH="${apkFile}"
         fi
-        APK_PATHS=("${apkFile}|")
+        APK_PATHS+="${apkFile}|"
     done
 
-    APK_PATHS[-1]=${APK_PATHS[-1]%|}
+    APK_PATHS=${APK_PATHS%|*}
 
     if [ ! -z "${APK_PATHS}" ] && [ -z "${BITRISE_APK_PATH}" ]; then
         envman add --key BITRISE_APK_PATH --value "${APK_PATHS[*]}"
