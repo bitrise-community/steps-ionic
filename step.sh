@@ -25,9 +25,9 @@ fi
 
 # Build the project
 if [ "${ionic_version}" = "3" ]; then
-    ionic cordova build ${build_parameters} || exit 1
+    ionic cordova build ${build_for_platform} ${build_parameters} || exit 1
 else
-    ionic build ${build_parameters} || exit 1
+    ionic build ${build_for_platform} ${build_parameters} || exit 1
 fi
 
 if [ "${build_for_platform}" = "ios" ]; then
@@ -36,11 +36,14 @@ if [ "${build_for_platform}" = "ios" ]; then
         for xcodeprojFolder in ./platforms/ios/*.xcodeproj
         do
             envman add --key BITRISE_PROJECT_PATH --value "${xcodeprojFolder}"
+            echo "Set to ${BITRISE_PROJECT_PATH} or $BITRISE_PROJECT_PATH"
+            BITRISE_PROJECT_PATH="${xcodeprojFolder}"
         done
         if [ -z "${BITRISE_PROJECT_PATH}" ]; then
             for xcworkspaceFolder in ./platforms/ios/*.xcworkspace
             do
                 envman add --key BITRISE_PROJECT_PATH --value "${xcworkspaceFolder}"
+                BITRISE_PROJECT_PATH="${xcworkspaceFolder}"
             done
         fi
     fi
@@ -52,20 +55,26 @@ else
     # If we have multiple apk files then we should manage the situation
     for apkFile in ./platforms/android/build/outputs/apk/*.apk
     do
+        echo "Found file: ${apkFile}"
         if [[ "${apkFile}" == *"-armv7-"* ]]; then
             if [ -z "${BITRISE_APK_PATH}" ]; then
                 envman add --key BITRISE_APK_PATH --value "${apkFile}"
+                BITRISE_APK_PATH="${apkFile}"
             fi
             envman add --key BITRISE_APK_PATH_ARMV7 --value "${apkFile}"
+            BITRISE_APK_PATH_ARMV7="${apkFile}"
         elif [[ "${apkFile}" == *"-x86-"* ]]; then
             envman add --key BITRISE_APK_PATH_X86 --value "${apkFile}"
+            BITRISE_APK_PATH_X86="${apkFile}"
         else
             envman add --key BITRISE_APK_PATH --value "${apkFile}"
+            BITRISE_APK_PATH="${apkFile}"
         fi
     done
 
     if [ -z "${BITRISE_APK_PATH}" ]; then
         envman add --key BITRISE_APK_PATH --value "${BITRISE_APK_PATH_X86}"
+        BITRISE_APK_PATH="${BITRISE_APK_PATH_X86}"
     fi
 fi
 
