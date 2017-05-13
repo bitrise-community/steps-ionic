@@ -1,21 +1,72 @@
 #!/bin/bash
 
-echo "This is the value specified for the input 'example_step_input': ${example_step_input}"
+set -x
 
-#
-# --- Export Environment Variables for other Steps:
-# You can export Environment Variables for other Steps with
-#  envman, which is automatically installed by `bitrise setup`.
-# A very simple example:
-#  envman add --key EXAMPLE_STEP_OUTPUT --value 'the value you want to share'
-# Envman can handle piped inputs, which is useful if the text you want to
-# share is complex and you don't want to deal with proper bash escaping:
-#  cat file_with_complex_input | envman add --KEY EXAMPLE_STEP_OUTPUT
-# You can find more usage examples on envman's GitHub page
-#  at: https://github.com/bitrise-io/envman
+# We want to work with ionic and cordova
+npm install -g cordova@${cordova_version} ionic@${ionic_version} || exit 1
 
-#
-# --- Exit codes:
-# The exit code of your Step is very important. If you return
-#  with a 0 exit code `bitrise` will register your Step as "successful".
-# Any non zero exit code will be registered as "failed" by `bitrise`.
+# Then we can install all packages
+npm install || exit 1
+
+# Install dependencies if missing
+if [ "${ionic_version}" = "3" ]; then
+    npm install @ionic/cli-plugin-ionic-angular@latest @ionic/cli-plugin-cordova@latest
+fi
+
+# Create www directory if it's not exist
+mkdir -p www
+
+# Add platform because it should not exist
+if [ "${ionic_version}" = "3" ]; then
+    ionic cordova platform add ${build_for_platform} || exit 1
+else
+    ionic platform add ${build_for_platform} || exit 1
+fi
+
+# Build the project
+if [ "${ionic_version}" = "3" ]; then
+    ionic cordova build ${build_parameters} || exit 1
+else
+    ionic build ${build_parameters} || exit 1
+fi
+
+if [ "${build_for_platform}" = "ios" ]; then
+    # Lets find the project path(s)
+    if [ -z "${BITRISE_PROJECT_PATH}" ]; then
+        for xcodeprojFolder in ./platforms/ios/*.xcodeproj
+        do
+            envman add --key BITRISE_PROJECT_PATH --value "${xcodeprojFolder}"
+        done
+        if [ -z "${BITRISE_PROJECT_PATH}" ]; then
+            for xcworkspaceFolder in ./platforms/ios/*.xcworkspace
+            do
+                envman add --key BITRISE_PROJECT_PATH --value "${xcworkspaceFolder}"
+            done
+        fi
+    fi
+
+    # Now try to change provisioning style
+    sed -i -e 's/attributes = {/attributes = { TargetAttributes = { 1D6058900D05DD3D006BFB54 = { ProvisioningStyle = '"${IOS_PROVISIONING_STYLE}"'; }; };/g' "${BITRISE_PROJECT_PATH}/project.pbxproj"
+    sed -i '' 's/ProvisioningStyle = Automatic;/ProvisioningStyle = '"${ios_provisioning_style}"';/' "${BITRISE_PROJECT_PATH}/project.pbxproj"
+else
+    # If we have multiple apk files then we should manage the situation
+    for apkFile in ./platforms/android/build/outputs/apk/*.apk
+    do
+        if [[ "${apkFile}" == *"-armv7-"* ]]; then
+            if [ -z "${BITRISE_APK_PATH}" ]; then
+                envman add --key BITRISE_APK_PATH --value "${apkFile}"
+            fi
+            envman add --key BITRISE_APK_PATH_ARMV7 --value "${apkFile}"
+        elif [[ "${apkFile}" == *"-x86-"* ]]; then
+            envman add --key BITRISE_APK_PATH_X86 --value "${apkFile}"
+        else
+            envman add --key BITRISE_APK_PATH --value "${apkFile}"
+        fi
+    done
+
+    if [ -z "${BITRISE_APK_PATH}" ]; then
+        envman add --key BITRISE_APK_PATH --value "${BITRISE_APK_PATH_X86}"
+    fi
+fi
+
+exit 0
