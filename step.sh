@@ -49,14 +49,16 @@ if [ "${build_for_platform}" = "ios" ]; then
     fi
 
     # Now try to change provisioning style
-    sed -i -e 's/attributes = {/attributes = { TargetAttributes = { 1D6058900D05DD3D006BFB54 = { ProvisioningStyle = '"${IOS_PROVISIONING_STYLE}"'; }; };/g' "${BITRISE_PROJECT_PATH}/project.pbxproj"
+    sed -i -e 's/attributes = {/attributes = { TargetAttributes = { 1D6058900D05DD3D006BFB54 = { ProvisioningStyle = '"${ios_provisioning_style}"'; }; };/g' "${BITRISE_PROJECT_PATH}/project.pbxproj"
     sed -i '' 's/ProvisioningStyle = Automatic;/ProvisioningStyle = '"${ios_provisioning_style}"';/' "${BITRISE_PROJECT_PATH}/project.pbxproj"
 else
     # If we have multiple apk files then we should manage the situation
+    APK_PATHS=()
     for apkFile in ./platforms/android/build/outputs/apk/*.apk
     do
         echo "Found file: ${apkFile}"
         if [[ "${apkFile}" == *"-armv7-"* ]]; then
+            # We need this because the sign script is not able to handle multiple files at the moment (PR is out!)
             if [ -z "${BITRISE_APK_PATH}" ]; then
                 envman add --key BITRISE_APK_PATH --value "${apkFile}"
                 BITRISE_APK_PATH="${apkFile}"
@@ -66,15 +68,18 @@ else
         elif [[ "${apkFile}" == *"-x86-"* ]]; then
             envman add --key BITRISE_APK_PATH_X86 --value "${apkFile}"
             BITRISE_APK_PATH_X86="${apkFile}"
-        else
+        elif [ -z "${BITRISE_APK_PATH}" ]; then
             envman add --key BITRISE_APK_PATH --value "${apkFile}"
             BITRISE_APK_PATH="${apkFile}"
         fi
+        APK_PATHS=("${apkFile}|")
     done
 
-    if [ -z "${BITRISE_APK_PATH}" ]; then
-        envman add --key BITRISE_APK_PATH --value "${BITRISE_APK_PATH_X86}"
-        BITRISE_APK_PATH="${BITRISE_APK_PATH_X86}"
+    APK_PATHS[-1]=${APK_PATHS[-1]%|}
+
+    if [ ! -z "${APK_PATHS}" ] && [ -z "${BITRISE_APK_PATH}" ]; then
+        envman add --key BITRISE_APK_PATH --value "${APK_PATHS[*]}"
+        BITRISE_APK_PATH="${APK_PATHS[*]}"
     fi
 fi
 
