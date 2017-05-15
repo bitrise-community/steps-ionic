@@ -18,14 +18,14 @@ mkdir -p www
 
 # Add platform because it should not exist
 if [ "${ionic_version}" = "3" ]; then
-    ionic cordova platform add ${build_for_platform} || exit 1
+    ionic cordova platform add ${build_for_platform} 2>&1 || exit 1
 else
     ionic platform add ${build_for_platform} || exit 1
 fi
 
 # Build the project
 if [ "${ionic_version}" = "3" ]; then
-    ionic cordova build ${build_for_platform} ${build_parameters} || exit 1
+    ionic cordova build ${build_for_platform} ${build_parameters} 2>&1 || exit 1
 else
     ionic build ${build_for_platform} ${build_parameters} || exit 1
 fi
